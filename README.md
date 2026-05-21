@@ -5,6 +5,8 @@
 粘贴角色的台词、Wiki 描述或性格设定，AI 自动提取角色特征并生成符合 Claude Code 规范的 Skill 文件。生成的 Skill 能让 Claude 在编码辅助时以该角色的语气、口癖和行为风格进行对话。
 
 <img width="1039" height="1585" alt="image" src="https://github.com/user-attachments/assets/fdc73bc7-a97b-4471-a883-b6442e9840e8" />
+<img width="1930" height="1372" alt="image" src="https://github.com/user-attachments/assets/bc373eda-3deb-4cfd-bb4a-212db3132659" />
+
 
 ## 效果预览
 
