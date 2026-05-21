@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anime Waifu Skill Distiller</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -185,18 +186,44 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 1.5rem;
-    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 0.85rem;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-word;
+    font-size: 0.88rem;
+    line-height: 1.75;
     max-height: 500px;
     overflow-y: auto;
     color: #d4d4d8;
   }
-  .skill-output .md-h1 { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
-  .skill-output .md-h2 { color: var(--pink); font-weight: 600; margin-top: 0.5rem; }
-  .skill-output .md-bold { color: #fff; }
+  .skill-output h1 { color: var(--accent); font-size: 1.3rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+  .skill-output h2 { color: var(--pink); font-size: 1.05rem; font-weight: 600; margin: 0.8rem 0 0.3rem; }
+  .skill-output h3 { color: #e2b0ff; font-size: 0.95rem; font-weight: 600; margin: 0.6rem 0 0.2rem; }
+  .skill-output p { margin: 0.4rem 0; }
+  .skill-output ul, .skill-output ol { padding-left: 1.5rem; margin: 0.3rem 0; }
+  .skill-output li { margin: 0.15rem 0; }
+  .skill-output code {
+    background: rgba(192,132,252,0.12); color: #e2b0ff;
+    padding: 1px 6px; border-radius: 3px; font-size: 0.82rem;
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+  }
+  .skill-output pre {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 1rem; overflow-x: auto;
+    margin: 0.5rem 0;
+  }
+  .skill-output pre code { background: none; padding: 0; color: #d4d4d8; }
+  .skill-output strong { color: #fff; }
+  .skill-output blockquote {
+    border-left: 3px solid var(--accent); padding-left: 1rem;
+    color: var(--text2); margin: 0.5rem 0;
+  }
+  .skill-output hr { border: none; border-top: 1px solid var(--border); margin: 0.8rem 0; }
+
+  .char-counter { color: var(--text2); font-size: 0.75rem; text-align: right; margin-top: 0.3rem; }
+  .char-counter.warn { color: #fbbf24; }
+  .char-counter.over { color: var(--red); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
 
   .preview-bubble {
     background: var(--surface2);
@@ -371,6 +398,7 @@
     </div>
 
     <textarea id="corpus" placeholder="在这里粘贴角色的台词、Wiki描述、性格设定...&#10;&#10;例如：&#10;「我可不是为了帮你才这么做的！」&#10;蕾姆是罗兹瓦尔宅邸的双胞胎女仆妹妹，表面毒舌但内心温柔..."></textarea>
+    <div class="char-counter" id="charCounter">0 / 5000</div>
     <div class="controls">
       <div class="intensity-group">
         <span style="color:var(--text2);font-size:0.85rem;">风格浓度：</span>
@@ -522,8 +550,21 @@ function toggleSettings() {
 // Persist on change
 document.addEventListener('DOMContentLoaded', () => {
   applySettings();
+
   ['apiKey', 'model', 'baseUrl'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => saveSettings(collectSettings()));
+  });
+
+  // Char counter
+  const ta = document.getElementById('corpus');
+  ta.addEventListener('input', updateCharCounter);
+
+  // Ctrl+Enter to generate
+  ta.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      generate();
+    }
   });
 });
 
@@ -579,6 +620,14 @@ async function generate() {
 
     currentResult = await resp.json();
 
+    // Reset chat
+    chatHistory = [];
+    const msgs = document.getElementById('chatMessages');
+    msgs.innerHTML = `<div class="chat-empty">
+      ✨ 在这里跟你刚生成的"老婆"实时聊天<br>
+      <span style="font-size:0.8rem;">试试说："帮我写一个 Python 排序函数"</span>
+    </div>`;
+
     document.getElementById('skillOutput').innerHTML = renderMarkdown(currentResult.skill_md);
     document.getElementById('traitsOutput').textContent = JSON.stringify(currentResult.trait, null, 2);
     document.getElementById('previewContent').innerHTML = renderPreview(currentResult.preview);
@@ -597,17 +646,19 @@ async function generate() {
 }
 
 function renderMarkdown(md) {
-  let html = md
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({ breaks: true, gfm: true });
+    return marked.parse(md);
+  }
+  // Fallback: basic HTML escape + line breaks
+  return escapeHtml(md).replace(/\n/g, '<br>');
+}
 
-  html = html.replace(/^### (.+)$/gm, '<span class="md-h2">### $1</span>');
-  html = html.replace(/^## (.+)$/gm, '<span class="md-h2">## $1</span>');
-  html = html.replace(/^# (.+)$/gm, '<span class="md-h1"># $1</span>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<span class="md-bold">$1</span>');
-  html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(192,132,252,0.15);padding:1px 5px;border-radius:3px;color:#e2b0ff;">$1</code>');
-  html = html.replace(/^- (.+)$/gm, '  • $1');
-
-  return html;
+function updateCharCounter() {
+  const len = document.getElementById('corpus').value.length;
+  const counter = document.getElementById('charCounter');
+  counter.textContent = len + ' / 5000';
+  counter.className = 'char-counter' + (len > 4500 ? ' warn' : '') + (len > 5000 ? ' over' : '');
 }
 
 function renderPreview(text) {
@@ -757,9 +808,18 @@ function appendChatMsg(role, sender, text) {
   return id;
 }
 
+function friendlyError(raw) {
+  if (/401|invalid.*api.?key|authentication/i.test(raw)) return 'API Key 无效，请检查设置（⚙）中的 Key 是否正确';
+  if (/429|rate.?limit/i.test(raw)) return '请求太频繁了，稍等一下再试～';
+  if (/timeout|timed out/i.test(raw)) return '请求超时，模型可能正忙，重试一次试试？';
+  if (/413|too large/i.test(raw)) return '语料太长了，删减一些再试～';
+  if (/insufficient_quota|quota|billing/i.test(raw)) return 'API 额度用完了，换一个 Key 试试';
+  return raw;
+}
+
 function showError(msg) {
   const el = document.getElementById('errorMsg');
-  el.textContent = msg;
+  el.textContent = friendlyError(msg);
   el.classList.add('show');
 }
 
