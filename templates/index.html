@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anime Waifu Skill Distiller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2a2a3a;
+    --text: #e4e4ec;
+    --text2: #9898b0;
+    --accent: #c084fc;
+    --accent2: #e879f9;
+    --pink: #f472b6;
+    --red: #f87171;
+    --green: #4ade80;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  .bg-glow {
+    position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  }
+  .bg-glow::before {
+    content: '';
+    position: absolute;
+    top: -40%; left: -20%;
+    width: 80%; height: 80%;
+    background: radial-gradient(circle, rgba(192,132,252,0.08) 0%, transparent 70%);
+  }
+  .bg-glow::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; right: -20%;
+    width: 70%; height: 70%;
+    background: radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 70%);
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; position: relative; z-index: 1; }
+
+  header {
+    text-align: center; padding: 3rem 0 2rem;
+  }
+  header h1 {
+    font-size: 2.4rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+  header .subtitle { color: var(--text2); font-size: 1.05rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .card-header {
+    font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .card-header .icon { font-size: 1.3rem; }
+
+  textarea {
+    width: 100%; min-height: 160px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: inherit; font-size: 0.95rem;
+    padding: 1rem; resize: vertical;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea::placeholder { color: var(--text2); }
+
+  .controls {
+    display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .intensity-group {
+    display: flex; gap: 0.5rem; align-items: center;
+  }
+  .intensity-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 0.85rem; font-family: inherit;
+    transition: all 0.2s;
+  }
+  .intensity-btn:hover { border-color: var(--accent); color: var(--text); }
+  .intensity-btn.active {
+    background: rgba(192,132,252,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn {
+    padding: 0.65rem 1.5rem;
+    border: none; border-radius: 20px;
+    font-family: inherit; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(192,132,252,0.3); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 0.5rem 1rem; font-size: 0.85rem;
+  }
+  .btn-ghost:hover { border-color: var(--accent); }
+
+  /* Settings */
+  .settings-toggle {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; margin-left: auto;
+  }
+  .settings-toggle:hover { border-color: var(--accent); color: var(--text); }
+  .settings-toggle.open { border-color: var(--accent); color: var(--accent); background: rgba(192,132,252,0.1); }
+
+  .settings-panel { display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .settings-panel.show { display: block; }
+
+  .setting-row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .setting-row:last-child { margin-bottom: 0; }
+  .setting-label { color: var(--text2); font-size: 0.8rem; min-width: 55px; }
+  .setting-input, .setting-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-family: inherit; font-size: 0.85rem; padding: 0.5rem 0.7rem;
+    transition: border-color 0.2s; flex: 1; min-width: 140px;
+  }
+  .setting-input:focus, .setting-select:focus { outline: none; border-color: var(--accent); }
+  .setting-input::placeholder { color: #555; }
+  .setting-select option { background: var(--surface); color: var(--text); }
+  .setting-hint { color: #555; font-size: 0.75rem; margin-top: -0.25rem; margin-bottom: 0.75rem; padding-left: 62px; }
+
+  .result-area { display: none; }
+  .result-area.show { display: block; }
+
+  .tabs {
+    display: flex; gap: 0; margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 0.6rem 1.2rem;
+    cursor: pointer; color: var(--text2);
+    border-bottom: 2px solid transparent;
+    font-size: 0.9rem; font-family: inherit;
+    background: none; border-top: none; border-left: none; border-right: none;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .skill-output {
+    background: #0d0d16;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 500px;
+    overflow-y: auto;
+    color: #d4d4d8;
+  }
+  .skill-output .md-h1 { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+  .skill-output .md-h2 { color: var(--pink); font-weight: 600; margin-top: 0.5rem; }
+  .skill-output .md-bold { color: #fff; }
+
+  .preview-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+  }
+  .preview-msg {
+    margin-bottom: 1rem; padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem; line-height: 1.6;
+  }
+  .preview-msg.user {
+    background: rgba(192,132,252,0.1);
+    border-left: 3px solid var(--accent);
+  }
+  .preview-msg.assistant {
+    background: rgba(244,114,182,0.08);
+    border-left: 3px solid var(--pink);
+  }
+  .preview-msg .label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 0.3rem;
+  }
+  .preview-msg.user .label { color: var(--accent); }
+  .preview-msg.assistant .label { color: var(--pink); }
+
+  .actions { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+
+  .history-item {
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .history-item:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+  .spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle; margin-right: 0.4rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.3);
+    color: var(--red); padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm); font-size: 0.9rem;
+    margin-top: 1rem; display: none;
+  }
+  .error-msg.show { display: block; }
+
+  footer {
+    text-align: center; padding: 2rem 0 3rem;
+    color: var(--text2); font-size: 0.8rem;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.6rem; }
+    .card { padding: 1.25rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .btn { text-align: center; }
+    .setting-row { flex-direction: column; align-items: stretch; }
+    .setting-hint { padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<div class="container">
+  <header>
+    <h1>二次元老婆 → Skill.md</h1>
+    <p class="subtitle">把你最爱的角色蒸馏成 Claude Code 的编码伴侣</p>
+  </header>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">📝</span> 角色语料
+      <button class="settings-toggle" id="settingsBtn" onclick="toggleSettings()" title="API 设置">⚙</button>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="setting-row">
+        <span class="setting-label">提供商</span>
+        <select class="setting-select" id="provider" onchange="onProviderChange()">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT-4o)</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="custom">自定义 (OpenAI 兼容)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">API Key</span>
+        <input class="setting-input" id="apiKey" type="password" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div class="setting-row" id="baseUrlRow" style="display:none;">
+        <span class="setting-label">Base URL</span>
+        <input class="setting-input" id="baseUrl" type="text" placeholder="https://api.openai.com/v1" autocomplete="off">
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">模型</span>
+        <input class="setting-input" id="model" type="text" placeholder="默认: claude-sonnet-4-6">
+      </div>
+    </div>
+
+    <textarea id="corpus" placeholder="在这里粘贴角色的台词、Wiki描述、性格设定...&#10;&#10;例如：&#10;「我可不是为了帮你才这么做的！」&#10;蕾姆是罗兹瓦尔宅邸的双胞胎女仆妹妹，表面毒舌但内心温柔..."></textarea>
+    <div class="controls">
+      <div class="intensity-group">
+        <span style="color:var(--text2);font-size:0.85rem;">风格浓度：</span>
+        <button class="intensity-btn active" data-intensity="full" onclick="setIntensity('full', this)">完全沉浸</button>
+        <button class="intensity-btn" data-intensity="light" onclick="setIntensity('light', this)">轻度口癖</button>
+      </div>
+      <button class="btn btn-primary" id="generateBtn" onclick="generate()">
+        ✨ 蒸馏生成
+      </button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Result Card -->
+  <div class="result-area" id="resultArea">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('skill')">📄 Skill.md</button>
+        <button class="tab" onclick="switchTab('preview')">💬 对话预览</button>
+        <button class="tab" onclick="switchTab('traits')">🔍 特征卡</button>
+      </div>
+
+      <div class="tab-content active" id="tab-skill">
+        <div class="skill-output" id="skillOutput"></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="copySkill()">📋 一键复制</button>
+          <button class="btn btn-ghost" onclick="downloadSkill()">⬇️ 下载 .md</button>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-preview">
+        <div class="preview-bubble" id="previewContent"></div>
+      </div>
+
+      <div class="tab-content" id="tab-traits">
+        <div class="skill-output" id="traitsOutput" style="font-family: monospace;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Card -->
+  <div class="card" id="historyCard" style="display:none;">
+    <div class="card-header"><span class="icon">🕐</span> 最近生成</div>
+    <div id="historyList"></div>
+  </div>
+
+  <footer>
+    Made with ❤️ for weebs who code
+  </footer>
+</div>
+
+<script>
+const SETTINGS_KEY = 'waifu_skill_settings';
+
+// Provider presets — mirror backend PROVIDERS
+const PROVIDER_DEFAULTS = {
+  anthropic: { model: 'claude-sonnet-4-6', base_url: '' },
+  openai:    { model: 'gpt-4o', base_url: 'https://api.openai.com/v1' },
+  deepseek:  { model: 'deepseek-chat', base_url: 'https://api.deepseek.com/v1' },
+  custom:    { model: '', base_url: '' },
+};
+
+function needsBaseUrl(provider) {
+  return provider !== 'anthropic';
+}
+
+let intensity = 'full';
+let currentResult = null;
+
+// --- Settings ---
+function getSettings() {
+  const defaults = { provider: 'anthropic', api_key: '', model: '', base_url: '' };
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    return { ...defaults, ...saved };
+  } catch(e) { return defaults; }
+}
+
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+function applySettings() {
+  const s = getSettings();
+  document.getElementById('provider').value = s.provider;
+  document.getElementById('apiKey').value = s.api_key;
+  document.getElementById('model').value = s.model;
+  document.getElementById('baseUrl').value = s.base_url;
+  refreshProviderUI();
+}
+
+function collectSettings() {
+  return {
+    provider: document.getElementById('provider').value,
+    api_key: document.getElementById('apiKey').value.trim(),
+    model: document.getElementById('model').value.trim(),
+    base_url: document.getElementById('baseUrl').value.trim(),
+  };
+}
+
+function refreshProviderUI() {
+  const provider = document.getElementById('provider').value;
+  const showUrl = needsBaseUrl(provider);
+  const urlRow = document.getElementById('baseUrlRow');
+  const urlInput = document.getElementById('baseUrl');
+  const modelInput = document.getElementById('model');
+
+  urlRow.style.display = showUrl ? 'flex' : 'none';
+
+  const def = PROVIDER_DEFAULTS[provider];
+  if (showUrl) {
+    urlInput.placeholder = def.base_url || 'https://your-api.example.com/v1';
+    if (!urlInput.value) urlInput.value = def.base_url;
+  }
+  modelInput.placeholder = '默认: ' + (def.model || '由 API 决定');
+}
+
+function onProviderChange() {
+  refreshProviderUI();
+  saveSettings(collectSettings());
+}
+
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  const btn = document.getElementById('settingsBtn');
+  panel.classList.toggle('show');
+  btn.classList.toggle('open');
+  if (panel.classList.contains('show')) saveSettings(collectSettings());
+}
+
+// Persist on change
+document.addEventListener('DOMContentLoaded', () => {
+  applySettings();
+  ['apiKey', 'model', 'baseUrl'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => saveSettings(collectSettings()));
+  });
+});
+
+function setIntensity(val, btn) {
+  intensity = val;
+  document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function generate() {
+  const corpus = document.getElementById('corpus').value.trim();
+  if (!corpus) {
+    showError('请先填入角色语料再生成哦～');
+    return;
+  }
+
+  const settings = collectSettings();
+  saveSettings(settings);
+
+  if (!settings.api_key) {
+    showError('请在设置（⚙）中填写 API Key');
+    return;
+  }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 蒸馏中...';
+  hideError();
+  document.getElementById('resultArea').classList.remove('show');
+
+  try {
+    const body = {
+      corpus,
+      intensity,
+      provider: settings.provider,
+      api_key: settings.api_key,
+      model: settings.model,
+    };
+    if (needsBaseUrl(settings.provider)) {
+      body.base_url = settings.base_url;
+    }
+
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Unknown error');
+    }
+
+    currentResult = await resp.json();
+
+    document.getElementById('skillOutput').innerHTML = renderMarkdown(currentResult.skill_md);
+    document.getElementById('traitsOutput').textContent = JSON.stringify(currentResult.trait, null, 2);
+    document.getElementById('previewContent').innerHTML = renderPreview(currentResult.preview);
+
+    document.getElementById('resultArea').classList.add('show');
+    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    saveHistory(currentResult);
+
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ 蒸馏生成';
+  }
+}
+
+function renderMarkdown(md) {
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  html = html.replace(/^### (.+)$/gm, '<span class="md-h2">### $1</span>');
+  html = html.replace(/^## (.+)$/gm, '<span class="md-h2">## $1</span>');
+  html = html.replace(/^# (.+)$/gm, '<span class="md-h1"># $1</span>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<span class="md-bold">$1</span>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(192,132,252,0.15);padding:1px 5px;border-radius:3px;color:#e2b0ff;">$1</code>');
+  html = html.replace(/^- (.+)$/gm, '  • $1');
+
+  return html;
+}
+
+function renderPreview(text) {
+  const parts = text.split(/(?=User:|Assistant:|用户：|助手：)/g);
+  let html = '';
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    if (/^(User:|用户：)/i.test(trimmed)) {
+      const content = trimmed.replace(/^User:|用户：/i, '').trim();
+      html += `<div class="preview-msg user"><div class="label">User</div>${escapeHtml(content)}</div>`;
+    } else if (/^(Assistant:|助手：)/i.test(trimmed)) {
+      const content = trimmed.replace(/^Assistant:|助手：/i, '').trim();
+      html += `<div class="preview-msg assistant"><div class="label">Assistant</div>${escapeHtml(content)}</div>`;
+    } else {
+      html += `<div class="preview-msg assistant"><div class="label">Preview</div>${escapeHtml(trimmed)}</div>`;
+    }
+  }
+  return html || `<div class="preview-msg assistant">${escapeHtml(text)}</div>`;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function copySkill() {
+  if (!currentResult) return;
+  navigator.clipboard.writeText(currentResult.skill_md).then(() => {
+    const btns = document.querySelectorAll('#tab-skill .btn-primary');
+    const btn = btns[0];
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function downloadSkill() {
+  if (!currentResult) return;
+  const name = currentResult.trait.name || 'character';
+  const safeName = name.replace(/[^a-zA-Z0-9一-鿿_-]/g, '_');
+  const blob = new Blob([currentResult.skill_md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${safeName}_skill.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('show');
+}
+
+// --- History ---
+const HISTORY_KEY = 'waifu_skill_history';
+const MAX_HISTORY = 5;
+
+function saveHistory(result) {
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch(e) {}
+  history.unshift({
+    name: result.trait.name || 'Unknown',
+    trait: result.trait,
+    skill_md: result.skill_md,
+    preview: result.preview,
+    time: Date.now()
+  });
+  history = history.slice(0, MAX_HISTORY);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch(e) {}
+
+  const card = document.getElementById('historyCard');
+  const list = document.getElementById('historyList');
+  if (history.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  list.innerHTML = history.map((h, i) => {
+    const time = new Date(h.time).toLocaleString('zh-CN');
+    return `<div class="history-item" onclick="loadHistory(${i})">
+      <strong>${escapeHtml(h.name)}</strong> · ${time}
+    </div>`;
+  }).join('');
+}
+
+function loadHistory(index) {
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch(e) {}
+  const item = history[index];
+  if (!item) return;
+  currentResult = { skill_md: item.skill_md, trait: item.trait, preview: item.preview };
+  document.getElementById('skillOutput').innerHTML = renderMarkdown(item.skill_md);
+  document.getElementById('traitsOutput').textContent = JSON.stringify(item.trait, null, 2);
+  document.getElementById('previewContent').innerHTML = renderPreview(item.preview);
+  document.getElementById('resultArea').classList.add('show');
+  document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Init
+renderHistory();
+</script>
+</body>
+</html>
