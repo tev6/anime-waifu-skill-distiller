@@ -4,11 +4,14 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from services import distill
+from services import distill, chat
 
 app = FastAPI(title="Anime Waifu Skill Distiller")
 
 BASE_DIR = Path(__file__).parent
+SKILLS_DIR = BASE_DIR / ".claude" / "skills"
+USER_SKILLS_DIR = Path.home() / ".claude" / "skills"
+
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 INDEX_HTML = (BASE_DIR / "templates" / "index.html").read_text(encoding="utf-8")
@@ -49,3 +52,67 @@ async def generate(request: Request):
         raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
 
     return result
+
+
+@app.post("/api/chat")
+async def chat_endpoint(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    skill_md = body.get("skill_md", "")
+    message = body.get("message", "").strip()
+    provider = body.get("provider", "anthropic")
+    api_key = body.get("api_key", "")
+    model = body.get("model", "")
+    base_url = body.get("base_url", "")
+
+    if not skill_md:
+        raise HTTPException(status_code=400, detail="skill_md is required")
+    if not message:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    try:
+        reply = chat(skill_md, message, provider, api_key, model, base_url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
+
+    return {"reply": reply}
+
+
+@app.post("/api/install")
+async def install(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    skill_md = body.get("skill_md", "")
+    scope = body.get("scope", "project")  # "project" or "user"
+
+    if not skill_md:
+        raise HTTPException(status_code=400, detail="skill_md is required")
+
+    # Extract skill name from markdown
+    skill_name = "character-coding-companion"
+    for line in skill_md.split("\n"):
+        line = line.strip()
+        if line.startswith("name:") or line.startswith("## Skill:"):
+            skill_name = line.split(":", 1)[1].strip().replace(" ", "-").lower()
+            if skill_name:
+                break
+
+    skill_name = "".join(c for c in skill_name if c.isalnum() or c in "-_") or "character"
+
+    target_dir = USER_SKILLS_DIR if scope == "user" else SKILLS_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = target_dir / f"{skill_name}.md"
+    file_path.write_text(skill_md, encoding="utf-8")
+
+    return {"installed": str(file_path), "name": skill_name, "scope": scope}

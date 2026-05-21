@@ -162,6 +162,7 @@ def generate_skill(
         _load_prompt("generate_skill.txt")
         .replace("{traits_json}", traits.model_dump_json(indent=2))
         .replace("{name}", traits.name)
+        .replace("{core_personality}", traits.core_personality)
         .replace("{intensity}", intensity)
     )
 
@@ -210,6 +211,32 @@ def generate_preview(
         model=model,
         base_url=base_url,
         max_tokens=512,
+    ).strip()
+
+
+def chat(
+    skill_md: str,
+    message: str,
+    provider: str = "anthropic",
+    api_key: str = "",
+    model: str = "",
+    base_url: str = "",
+) -> str:
+    """Chat with the generated waifu persona. Uses skill_md as the system prompt."""
+    model = _resolve_model(provider, model)
+    if not api_key:
+        api_key = os.getenv("ANTHROPIC_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
+
+    system_prompt = f"{skill_md}\n\n现在，请严格按照以上角色设定与用户对话。用角色的语气、口癖和风格回复。技术内容必须准确。"
+
+    return _call_llm(
+        system_prompt=system_prompt,
+        user_message=message,
+        provider=provider,
+        api_key=api_key,
+        model=model,
+        base_url=base_url,
+        max_tokens=1024,
     ).strip()
 
 

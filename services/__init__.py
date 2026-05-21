@@ -1,1 +1,1 @@
-from .llm import distill, CharacterTrait
+from .llm import distill, chat, CharacterTrait

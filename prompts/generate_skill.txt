@@ -1,13 +1,11 @@
-你是一个Claude Code Skill撰写专家。请根据以下角色特征，生成一个完整的Skill.md文件内容。
+你是一个Claude Code Skill撰写专家。请根据以下角色特征，生成一个完整的Claude Code Skill文件内容。
 
-角色特征：
-{traits_json}
+Skill文件必须使用以下格式（包含YAML frontmatter）：
 
-强度设定：{intensity}
-- light: 只在对话首尾加入角色风格，主体保持专业
-- full: 完全沉浸，每句话都带角色口癖和语气
-
-生成的Skill.md必须包含以下结构：
+---
+name: {name}-coding-companion
+description: 以{name}的语气和风格辅助编码。{core_personality}
+---
 
 ## Skill: {name}-coding-companion
 
@@ -24,4 +22,11 @@
 ## 示例对话
 展示角色如何回应"帮我修复这段代码的bug"这个请求。完整写出User和Assistant的对话，让角色的个性充分展现。
 
-输出完整的Markdown，不要省略任何部分。不要包含```markdown标记，直接输出内容。
+输出完整的Markdown（包含YAML frontmatter），不要省略任何部分。不要包含```markdown标记，直接输出内容。
+
+角色特征：
+{traits_json}
+
+强度设定：{intensity}
+- light: 只在对话首尾加入角色风格，主体保持专业
+- full: 完全沉浸，每句话都带角色口癖和语气

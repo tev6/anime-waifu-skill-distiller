@@ -226,6 +226,65 @@
 
   .actions { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
 
+  /* Chat */
+  .chat-container {
+    display: flex; flex-direction: column; height: 420px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 1rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .chat-msg {
+    max-width: 80%; padding: 0.65rem 1rem;
+    border-radius: 14px; font-size: 0.88rem; line-height: 1.55;
+    word-break: break-word;
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    background: rgba(192,132,252,0.15);
+    border: 1px solid rgba(192,132,252,0.25);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.waifu {
+    align-self: flex-start;
+    background: rgba(244,114,182,0.08);
+    border: 1px solid rgba(244,114,182,0.2);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg .chat-sender {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 0.2rem;
+  }
+  .chat-msg.user .chat-sender { color: var(--accent); }
+  .chat-msg.waifu .chat-sender { color: var(--pink); }
+  .chat-input-row {
+    display: flex; gap: 0.5rem; padding: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-row input {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 20px;
+    color: var(--text); font-family: inherit; font-size: 0.85rem;
+    padding: 0.55rem 1rem;
+  }
+  .chat-input-row input:focus { outline: none; border-color: var(--accent); }
+  .chat-input-row input::placeholder { color: #555; }
+  .chat-send-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: none; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .chat-send-btn:hover { transform: scale(1.05); }
+  .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .chat-empty {
+    color: var(--text2); text-align: center; padding: 3rem 1rem;
+    font-size: 0.9rem; line-height: 1.8;
+  }
+
   .history-item {
     padding: 0.6rem 0.8rem;
     border-radius: var(--radius-sm);
@@ -332,6 +391,7 @@
         <button class="tab active" onclick="switchTab('skill')">📄 Skill.md</button>
         <button class="tab" onclick="switchTab('preview')">💬 对话预览</button>
         <button class="tab" onclick="switchTab('traits')">🔍 特征卡</button>
+        <button class="tab" onclick="switchTab('chat')">💬 试聊</button>
       </div>
 
       <div class="tab-content active" id="tab-skill">
@@ -339,6 +399,7 @@
         <div class="actions">
           <button class="btn btn-primary" onclick="copySkill()">📋 一键复制</button>
           <button class="btn btn-ghost" onclick="downloadSkill()">⬇️ 下载 .md</button>
+          <button class="btn btn-ghost" id="installBtn" onclick="installSkill('project')">⚡ 安装到项目</button>
         </div>
       </div>
 
@@ -348,6 +409,21 @@
 
       <div class="tab-content" id="tab-traits">
         <div class="skill-output" id="traitsOutput" style="font-family: monospace;"></div>
+      </div>
+
+      <div class="tab-content" id="tab-chat">
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-empty">
+              ✨ 在这里跟你刚生成的"老婆"实时聊天<br>
+              <span style="font-size:0.8rem;">试试说："帮我写一个 Python 排序函数"</span>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input id="chatInput" type="text" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">▶</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -380,6 +456,7 @@ function needsBaseUrl(provider) {
 
 let intensity = 'full';
 let currentResult = null;
+let chatHistory = [];
 
 // --- Settings ---
 function getSettings() {
@@ -585,6 +662,99 @@ function downloadSkill() {
   a.href = url; a.download = `${safeName}_skill.md`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function installSkill(scope) {
+  if (!currentResult) return;
+  const btn = document.getElementById('installBtn');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ 安装中...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skill_md: currentResult.skill_md, scope }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Unknown');
+    }
+    const data = await resp.json();
+    btn.textContent = '✅ 已安装!';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  } catch (e) {
+    btn.textContent = '❌ 失败';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  }
+}
+
+// --- Chat ---
+async function sendChat() {
+  if (!currentResult) return;
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSendBtn');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const settings = collectSettings();
+
+  // Clear empty state on first message
+  const empty = document.querySelector('#chatMessages .chat-empty');
+  if (empty) empty.remove();
+
+  // Append user message
+  appendChatMsg('user', 'You', message);
+  input.value = '';
+  input.focus();
+
+  // Loading
+  btn.disabled = true;
+  const loadingId = appendChatMsg('waifu', '...', '<span class="spinner"></span>');
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        skill_md: currentResult.skill_md,
+        message,
+        provider: settings.provider,
+        api_key: settings.api_key,
+        model: settings.model,
+        base_url: settings.base_url,
+      }),
+    });
+
+    // Remove loading
+    document.getElementById(loadingId)?.remove();
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      appendChatMsg('waifu', 'Error', '唔… 出错了: ' + (err.detail || 'Unknown'));
+    } else {
+      const data = await resp.json();
+      appendChatMsg('waifu', currentResult.trait.name || 'Waifu', data.reply);
+    }
+  } catch (e) {
+    document.getElementById(loadingId)?.remove();
+    appendChatMsg('waifu', 'Error', '连接失败了… ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function appendChatMsg(role, sender, text) {
+  const container = document.getElementById('chatMessages');
+  const id = 'msg-' + Date.now();
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'chat-msg ' + role;
+  div.innerHTML = `<div class="chat-sender">${escapeHtml(sender)}</div>${text}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
 }
 
 function showError(msg) {
