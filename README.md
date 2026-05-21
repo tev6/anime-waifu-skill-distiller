@@ -1,3 +1,4 @@
+（项目处于早期， 仍在持续打磨中喵~）
 # Anime Waifu Skill Distiller
 
 把你最爱的二次元角色蒸馏成 Claude Code 的 **Skill.md** 编码伴侣。
