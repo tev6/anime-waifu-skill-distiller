@@ -485,6 +485,7 @@ function needsBaseUrl(provider) {
 let intensity = 'full';
 let currentResult = null;
 let chatHistory = [];
+let generating = false;
 
 // --- Settings ---
 function getSettings() {
@@ -575,9 +576,13 @@ function setIntensity(val, btn) {
 }
 
 async function generate() {
+  if (generating) return;
+  generating = true;
+
   const corpus = document.getElementById('corpus').value.trim();
   if (!corpus) {
     showError('请先填入角色语料再生成哦～');
+    generating = false;
     return;
   }
 
@@ -586,6 +591,7 @@ async function generate() {
 
   if (!settings.api_key) {
     showError('请在设置（⚙）中填写 API Key');
+    generating = false;
     return;
   }
 
@@ -640,6 +646,7 @@ async function generate() {
   } catch (e) {
     showError(e.message);
   } finally {
+    generating = false;
     btn.disabled = false;
     btn.innerHTML = '✨ 蒸馏生成';
   }

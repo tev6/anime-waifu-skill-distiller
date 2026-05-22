@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -6,11 +7,22 @@ from fastapi.staticfiles import StaticFiles
 
 from services import distill, chat
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Anime Waifu Skill Distiller")
+
+MAX_BODY_SIZE = 65536  # 64KB
 
 BASE_DIR = Path(__file__).parent
 SKILLS_DIR = BASE_DIR / ".claude" / "skills"
 USER_SKILLS_DIR = Path.home() / ".claude" / "skills"
+
+
+def _check_body_size(request: Request):
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_BODY_SIZE:
+        raise HTTPException(status_code=413, detail="Request body too large. Max 64KB.")
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
@@ -24,6 +36,7 @@ async def index():
 
 @app.post("/api/generate")
 async def generate(request: Request):
+    _check_body_size(request)
     try:
         body = await request.json()
     except Exception:
@@ -49,13 +62,15 @@ async def generate(request: Request):
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
+        logger.error("LLM call failed in /api/generate: %s", e)
+        raise HTTPException(status_code=500, detail="LLM call failed. Check your API key and network connection.")
 
     return result
 
 
 @app.post("/api/chat")
 async def chat_endpoint(request: Request):
+    _check_body_size(request)
     try:
         body = await request.json()
     except Exception:
@@ -80,13 +95,15 @@ async def chat_endpoint(request: Request):
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
+        logger.error("LLM call failed in /api/chat: %s", e)
+        raise HTTPException(status_code=500, detail="Chat request failed. Check your API key and network connection.")
 
     return {"reply": reply}
 
 
 @app.post("/api/install")
 async def install(request: Request):
+    _check_body_size(request)
     try:
         body = await request.json()
     except Exception:
