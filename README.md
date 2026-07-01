@@ -1,7 +1,6 @@
-（项目处于早期， 仍在持续打磨中喵~）
 # Anime Waifu Skill Distiller
 
-把你最爱的二次元角色蒸馏成 Claude Code 的 **Skill.md** 编码伴侣。
+将任何角色蒸馏成 Claude Code 的 **Skill.md** 编码伴侣。
 
 粘贴角色的台词、Wiki 描述或性格设定，AI 自动提取角色特征并生成符合 Claude Code 规范的 Skill 文件。生成的 Skill 能让 Claude 在编码辅助时以该角色的语气、口癖和行为风格进行对话。
 
